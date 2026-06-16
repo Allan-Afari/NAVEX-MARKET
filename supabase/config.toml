@@ -1,0 +1,4 @@
+project_id = "dvuwffkgqlrebrbzbwta"
+
+[functions.smile-id-webhook]
+verify_jwt = true
