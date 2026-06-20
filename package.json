@@ -17,7 +17,11 @@
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:status": "supabase status",
-    "supabase:gen-types": "supabase gen types typescript --local > src/integrations/supabase/types.ts"
+    "supabase:gen-types": "supabase gen types typescript --local > src/integrations/supabase/types.ts",
+    "docker:build": "docker build -t navex-market .",
+    "docker:run": "docker run -p 3000:80 navex-market",
+    "docker:compose:up": "docker-compose up --build -d",
+    "docker:compose:down": "docker-compose down"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",

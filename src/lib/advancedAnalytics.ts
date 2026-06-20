@@ -22,7 +22,7 @@ export interface UserAnalytics {
   totalDealsCreated: number;
   totalDealsJoined: number;
   totalInvested: number;
-  portfolio Value: number;
+  portfolioValue: number;
   successRate: number; // percentage
   trustScore: number;
   reputationRating: number;
@@ -180,7 +180,7 @@ export const getUserAnalytics = async (userId: string): Promise<UserAnalytics | 
       totalDealsCreated,
       totalDealsJoined,
       totalInvested,
-      portfolio Value: portfolioValue,
+      portfolioValue: portfolioValue,
       successRate: profile?.success_rate || 0,
       trustScore: profile?.trust_score || 0,
       reputationRating: profile?.reputation_rating || 0,

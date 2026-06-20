@@ -347,7 +347,7 @@ export async function apiEndpointWithRateLimit(
 // Example 4: Batch cache operations
 export async function getMultipleDealsWithCache(dealIds: string[]) {
   const keys = dealIds.map((id) => CACHE_KEYS.DEAL_BY_ID(id));
-  let cachedDeals = await cacheGetBatch<any>(keys);
+  const cachedDeals = await cacheGetBatch<any>(keys);
 
   // Fetch missing deals
   const missingIndexes = cachedDeals

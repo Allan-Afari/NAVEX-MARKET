@@ -1976,7 +1976,7 @@ export interface Database {
           signature_id: string;
           signer_id: string;
           action: string;
-          ''reminded'': Json;
+          reminded?: Json;
           ip_address: string;
           user_agent: string;
           metadata: Json;
@@ -1987,7 +1987,7 @@ export interface Database {
           signature_id?: string;
           signer_id?: string;
           action?: string;
-          ''reminded''?: Json;
+          reminded?: Json;
           ip_address?: string;
           user_agent?: string;
           metadata?: Json;
@@ -1998,7 +1998,7 @@ export interface Database {
           signature_id?: string;
           signer_id?: string;
           action?: string;
-          ''reminded''?: Json;
+          reminded?: Json;
           ip_address?: string;
           user_agent?: string;
           metadata?: Json;
@@ -2013,7 +2013,7 @@ export interface Database {
           email: string;
           name: string;
           role: string;
-          ''legal'': Json;
+          legal?: Json;
           signature_data: Json;
           ip_address: string;
           user_agent: string;
@@ -2027,7 +2027,7 @@ export interface Database {
           email?: string;
           name?: string;
           role?: string;
-          ''legal''?: Json;
+          legal?: Json;
           signature_data?: Json;
           ip_address?: string;
           user_agent?: string;
@@ -2041,7 +2041,7 @@ export interface Database {
           email?: string;
           name?: string;
           role?: string;
-          ''legal''?: Json;
+          legal?: Json;
           signature_data?: Json;
           ip_address?: string;
           user_agent?: string;
