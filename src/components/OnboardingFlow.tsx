@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +36,13 @@ const steps = [
   { id: "verify", title: "Verify Your Account", description: "Identity verification (optional now, required later)" },
 ];
 
-export const OnboardingFlow = ({ user }: { user: User }) => {
+export const OnboardingFlow = ({
+  user,
+  onComplete,
+}: {
+  user: User;
+  onComplete?: () => void;
+}) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [data, setData] = useState<OnboardingData>({
     full_name: user?.user_metadata?.full_name || "",
@@ -48,24 +53,21 @@ export const OnboardingFlow = ({ user }: { user: User }) => {
     location: "",
   });
   const [loading, setLoading] = useState(false);
-  const [completed, setCompleted] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user has completed onboarding
     const checkOnboarding = async () => {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("onboarded_at")
+        .select("onboarded_at, onboarded")
         .eq("id", user.id)
         .single();
 
-      if (profile?.onboarded_at) {
-        setCompleted(true);
+      if (profile?.onboarded_at || profile?.onboarded) {
+        onComplete?.();
       }
     };
     checkOnboarding();
-  }, [user]);
+  }, [user, onComplete]);
 
   const handleRoleSelect = (role: "business" | "investor") => {
     setData((prev) => ({ ...prev, role }));
@@ -101,34 +103,41 @@ export const OnboardingFlow = ({ user }: { user: User }) => {
         return;
       }
 
-      // Update profile
+      // Map UI role to profiles.user_role column
+      const userRole =
+        data.role === "business" ? "business_owner" : "investor";
+
       const { error } = await supabase
         .from("profiles")
         .update({
-          full_name: data.full_name,
-          company_name: data.company_name,
-          role: data.role,
-          bio: data.bio || null,
+          full_name: data.full_name.trim(),
+          company_name: data.company_name.trim(),
+          user_role: userRole,
+          bio: data.bio.trim() || null,
           preferred_sectors: data.sectors.length > 0 ? data.sectors : null,
-          location: data.location,
+          sector: data.sectors[0] ?? null,
+          location: data.location.trim(),
+          onboarded: true,
           onboarded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .eq("id", user.id);
 
       if (error) throw error;
 
       toast.success("Welcome to Navex Market!");
-      setCompleted(true);
-      navigate("/dashboard");
-    } catch (err) {
+      onComplete?.();
+    } catch (err: unknown) {
       console.error("Onboarding error:", err);
-      toast.error("Failed to complete onboarding");
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: string }).message)
+          : "Failed to complete onboarding";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
-
-  if (completed) return null;
 
   const step = steps[currentStep];
 

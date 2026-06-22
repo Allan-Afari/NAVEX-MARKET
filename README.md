@@ -1,71 +1,109 @@
 ﻿# Navex Market
 
-A hybrid web and mobile deal-collaboration platform built with React, Vite, TypeScript, Tailwind, Supabase, and Capacitor.
+Deal collaboration platform — marketplace, deal rooms, messaging, documents, billing, and admin tooling.
 
-## Getting started
+**Stack:** React 18 · Vite · TypeScript · Tailwind · shadcn/ui · Supabase · Capacitor (Android)
 
-1. Install dependencies:
-   ```powershell
-   npm install
-   ```
-2. Copy environment examples:
-   ```powershell
-   copy .env.example .env
-   copy .env.local.example .env.local
-   ```
-3. Update `.env` and `.env.local` with your Supabase and service credentials.
-4. Keep `.env` and `.env.local` out of source control; these files are already ignored by `.gitignore`.
-4. Start the app:
-   ```powershell
-   npm run dev
-   ```
+## Quick start
+
+```powershell
+npm install
+copy .env.example .env
+copy .env.local.example .env.local
+# Fill in Supabase credentials, then:
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173).
 
 ## Environment variables
 
-The app uses the following environment variables:
+| Variable | Where | Purpose |
+|----------|-------|---------|
+| `VITE_SUPABASE_URL` | Client | Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Client | Supabase anon key |
+| `VITE_SENTRY_DSN` | Client | Error reporting (optional) |
+| `VITE_ENABLE_OFFLINE_MODE` | Client | Mock Supabase for local dev |
+| `RESEND_API_KEY` | Edge Function | Outbound email via Resend |
+| `APP_URL` | Edge Function | Links in email templates |
+| `SMILE_PARTNER_ID` | Edge Function | Smile ID KYC |
+| `SMILE_API_KEY` | Edge Function | Smile ID + webhook HMAC |
+| `SUPABASE_SERVICE_ROLE_KEY` | Edge Functions only | Server-side DB access |
 
-- `VITE_SUPABASE_URL` — Supabase project URL
-- `VITE_SUPABASE_PUBLISHABLE_KEY` — Supabase anon/public API key
-- `VITE_SENTRY_DSN` — Sentry DSN for production error reporting
-- `RESEND_API_KEY` — Resend API key for outbound email notifications
-- `APP_URL` — Public application URL used in email links
-- `SMILE_API_KEY` — Smile ID webhook signature secret for verification
-- `VITE_ENABLE_OFFLINE_MODE` — set to `true` to enable local fetch interception for development/testing
+See `.env.example` and `.env.local.example` for the full list.
 
-Server or function-only variables:
+## Scripts
 
-- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key for server-side functions only
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Vite dev server |
+| `npm run build` | Production build → `dist/` |
+| `npm run test` | Vitest unit tests |
+| `npm run e2e:test` | Playwright e2e (after `npm run e2e:install`) |
+| `npm run supabase:start` | Local Supabase stack |
+| `npm run docker:compose:up` | Docker + nginx production image |
 
-## Build
+## Project layout
+
+```
+src/
+  pages/          Route-level screens
+  components/     UI and feature components
+  lib/            Business logic and integrations
+  integrations/   Supabase client and generated types
+supabase/
+  migrations/     Database schema + RLS
+  functions/      Edge Functions (email, KYC, payments)
+android/          Capacitor Android shell
+docs/
+  SUPABASE.md     Backend setup and verification checklist
+  archive/        Legacy planning docs (historical reference)
+```
+
+## Key routes
+
+| Path | Access | Description |
+|------|--------|-------------|
+| `/` | Public | Landing page |
+| `/marketplace` | Auth | Deal search and discovery |
+| `/deal-rooms` | Auth | Deal room list |
+| `/deal-room/:id` | Auth | Room detail (chat, docs, disputes) |
+| `/reputation` | Auth | Reviews and disputes |
+| `/admin` | Admin | User/deal/dispute management |
+| `/auth/callback` | Public | Email confirmation handler |
+
+## Supabase
+
+Apply migrations to your project (local or remote), then deploy Edge Functions:
+
+```powershell
+supabase db push          # remote
+supabase functions deploy send-email-notification
+supabase functions deploy smile-id-webhook
+supabase functions deploy smile-id-create-session
+```
+
+See [docs/SUPABASE.md](docs/SUPABASE.md) for the full verification checklist.
+
+## Mobile
 
 ```powershell
 npm run build
+npx cap sync android
+npx cap open android
 ```
 
 ## Testing
 
 ```powershell
-npm run test
+npm run test              # 79 unit tests
+npm run build             # must pass before deploy
 ```
 
-## Supabase
+## Archived documentation
 
-This app uses Supabase for database and auth. Local Supabase commands:
+Earlier AI-generated planning docs (launch checklists, integration guides, competitive analysis) live in `docs/archive/`. They are historical context only — **this README and `docs/SUPABASE.md` are the source of truth.**
 
-```powershell
-npm run supabase:start
-npm run supabase:stop
-npm run supabase:status
-```
+## License
 
-## Key documentation
-
-- `START_HERE_README.md` – product status and launch summary
-- `CODE_REFERENCE_GUIDE.md` – code/service reference
-- `LAUNCH_CHECKLIST_AND_TESTING.md` – launch and QA plan
-- `DOCUMENTATION_INDEX.md` – documentation map
-
-## Notes
-
-- The repository was cleaned to remove generated artifacts and legacy binary/archive files.
-- Keep `.env` and local secrets out of version control.
+See [LICENSE](LICENSE).

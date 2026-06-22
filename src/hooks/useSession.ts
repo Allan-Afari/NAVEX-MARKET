@@ -30,6 +30,7 @@ export const useSession = (): UseSessionResult => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!mounted) return;
       setSession(nextSession ?? null);
+      setLoading(false);
     });
 
     return () => {

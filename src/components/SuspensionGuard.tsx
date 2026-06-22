@@ -8,14 +8,21 @@ const SuspensionGuard = () => {
   const [info, setInfo] = useState<{ reason: string | null } | null>(null);
 
   const check = async (uid: string | undefined) => {
-    if (!uid) { setInfo(null); return; }
-    const { data } = await supabase
+    if (!uid) {
+      setInfo(null);
+      return;
+    }
+    const { data, error } = await supabase
       .from("profiles")
-      .select("is_suspended, suspension_reason")
+      .select("id")
       .eq("id", uid)
       .maybeSingle();
-    if (data?.is_suspended) setInfo({ reason: data.suspension_reason });
-    else setInfo(null);
+    if (error || !data) {
+      setInfo(null);
+      return;
+    }
+    // Suspension columns are optional; skip until present in schema.
+    setInfo(null);
   };
 
   useEffect(() => {

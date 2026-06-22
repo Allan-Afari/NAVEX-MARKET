@@ -118,6 +118,7 @@ serve(async (req: Request) => {
     await supabase.from("email_queue").insert({
       to_email: to,
       subject,
+      body_plain: html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
       body_html: html,
       notification_type: type,
       related_id: related_id || null,

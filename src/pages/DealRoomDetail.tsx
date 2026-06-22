@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense, lazy } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
@@ -13,13 +13,18 @@ import DealRoomNegotiation from "@/components/deal-rooms/DealRoomNegotiation";
 import ActivityFeed from "@/components/deal-rooms/ActivityFeed";
 import DealNegotiationTerms from "@/components/deal-rooms/DealNegotiationTerms";
 import DisputeResolution from "@/components/deal-rooms/DisputeResolution";
-import ActivityAuditDashboard from "@/components/ActivityAuditDashboard";
 import DocumentTemplateSelector from "@/components/deal-rooms/DocumentTemplateSelector";
 import VideoConferenceButton from "@/components/deal-rooms/VideoConferenceButton";
 import { ArrowLeft, ShieldCheck, Users, Lock, Clipboard } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
+
+const ActivityAuditDashboard = lazy(() => import("@/components/ActivityAuditDashboard"));
+
+const ChartFallback = () => (
+  <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">Loading charts…</div>
+);
 
 interface DealRoom {
   id: string;
@@ -268,7 +273,9 @@ const DealRoomDetail = () => {
 
         {isAdmin && (
           <div className="mt-6">
-            <ActivityAuditDashboard dealRoomId={id} isAdmin={true} />
+            <Suspense fallback={<ChartFallback />}>
+              <ActivityAuditDashboard dealRoomId={id} isAdmin={true} />
+            </Suspense>
           </div>
         )}
 

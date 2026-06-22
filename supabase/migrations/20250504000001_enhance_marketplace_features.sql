@@ -5,14 +5,11 @@ ALTER TABLE deals ADD COLUMN IF NOT EXISTS preferred_locations TEXT[];
 ALTER TABLE deals ADD COLUMN IF NOT EXISTS view_count INTEGER DEFAULT 0;
 ALTER TABLE deals ADD COLUMN IF NOT EXISTS engagement_score DECIMAL DEFAULT 0;
 
--- Add indexes for better search performance
+-- Add indexes for better search performance (match actual deals columns)
 CREATE INDEX IF NOT EXISTS idx_deals_stage ON deals(stage);
-CREATE INDEX IF NOT EXISTS idx_deals_industry ON deals(industry);
+CREATE INDEX IF NOT EXISTS idx_deals_sector ON deals(sector);
 CREATE INDEX IF NOT EXISTS idx_deals_location ON deals(location);
-CREATE INDEX IF NOT EXISTS idx_deals_deal_type ON deals(deal_type);
-CREATE INDEX IF NOT EXISTS idx_deals_status ON deals(status);
 CREATE INDEX IF NOT EXISTS idx_deals_created_at ON deals(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_deals_target_raise ON deals(target_raise);
 CREATE INDEX IF NOT EXISTS idx_deals_view_count ON deals(view_count DESC);
 CREATE INDEX IF NOT EXISTS idx_deals_engagement_score ON deals(engagement_score DESC);
 

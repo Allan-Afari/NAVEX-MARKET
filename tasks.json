@@ -1,0 +1,77 @@
+[
+  {
+    "id": "1",
+    "content": "Fix double QueryClient — remove duplicate in App.tsx",
+    "status": "completed"
+  },
+  {
+    "id": "2",
+    "content": "Move Resend email sending to Edge Function (remove frontend SDK exposure)",
+    "status": "completed"
+  },
+  {
+    "id": "3",
+    "content": "Wire OnboardingFlow into post-signup / Dashboard",
+    "status": "completed"
+  },
+  {
+    "id": "4",
+    "content": "Unify disputes — single disputes table for platform and deal rooms",
+    "status": "completed"
+  },
+  {
+    "id": "5",
+    "content": "Add /privacy, /terms, /contact pages + wire Footer links",
+    "status": "completed"
+  },
+  {
+    "id": "6",
+    "content": "Add /auth/callback email confirmation handler",
+    "status": "completed"
+  },
+  {
+    "id": "7",
+    "content": "Wire analytics trackPageView to React Router route changes",
+    "status": "completed"
+  },
+  {
+    "id": "8",
+    "content": "Wire BulkImportDialog into Admin page + OpportunityAlert into Dashboard",
+    "status": "completed"
+  },
+  {
+    "id": "9",
+    "content": "Create .env.example with all required variables documented",
+    "status": "completed"
+  },
+  {
+    "id": "10",
+    "content": "Consolidate documentation into README + docs/SUPABASE.md",
+    "status": "completed"
+  },
+  {
+    "id": "11",
+    "content": "Fix Smile ID webhook payload parsing (userId, resultCode, refId)",
+    "status": "completed"
+  },
+  {
+    "id": "12",
+    "content": "Lazy-load chart dashboards (Admin compliance, deal room audit)",
+    "status": "completed"
+  },
+  {
+    "id": "13",
+    "content": "Apply Supabase migrations to remote project (supabase db push)",
+    "status": "completed"
+  },
+  {
+    "id": "14",
+    "content": "Deploy Edge Functions and configure secrets (Resend, Smile ID)",
+    "status": "in_progress"
+  },
+  {
+    "id": "15",
+    "content": "Verify Resend sender domain or update FROM_ADDRESS in edge function",
+    "status": "pending"
+  }
+]

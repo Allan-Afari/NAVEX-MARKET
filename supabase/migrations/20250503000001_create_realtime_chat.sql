@@ -9,13 +9,14 @@ CREATE TABLE IF NOT EXISTS deal_room_messages (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
-CREATE INDEX idx_deal_room_messages_deal_room_id ON deal_room_messages(deal_room_id);
-CREATE INDEX idx_deal_room_messages_sender_id ON deal_room_messages(sender_id);
-CREATE INDEX idx_deal_room_messages_created_at ON deal_room_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_deal_room_messages_deal_room_id ON deal_room_messages(deal_room_id);
+CREATE INDEX IF NOT EXISTS idx_deal_room_messages_sender_id ON deal_room_messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_deal_room_messages_created_at ON deal_room_messages(created_at);
 
 ALTER TABLE deal_room_messages ENABLE ROW LEVEL SECURITY;
 
 -- RLS: Users can view messages for deal rooms they're part of
+DROP POLICY IF EXISTS deal_room_messages_select ON deal_room_messages;
 CREATE POLICY deal_room_messages_select ON deal_room_messages
   FOR SELECT
   USING (
@@ -27,6 +28,7 @@ CREATE POLICY deal_room_messages_select ON deal_room_messages
   );
 
 -- RLS: Users can insert messages for deal rooms they're part of
+DROP POLICY IF EXISTS deal_room_messages_insert ON deal_room_messages;
 CREATE POLICY deal_room_messages_insert ON deal_room_messages
   FOR INSERT
   WITH CHECK (
@@ -39,6 +41,7 @@ CREATE POLICY deal_room_messages_insert ON deal_room_messages
   );
 
 -- RLS: Users can only update/delete their own messages
+DROP POLICY IF EXISTS deal_room_messages_update ON deal_room_messages;
 CREATE POLICY deal_room_messages_update ON deal_room_messages
   FOR UPDATE
   USING (auth.uid() = sender_id);

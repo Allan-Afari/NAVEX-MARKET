@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/hooks/useSession";
 import Navbar from "@/components/landing/Navbar";
 import { BarChart3, FileText, MessageSquare, TrendingUp, Plus, Star, CreditCard, Users, Lock, Unlock } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
@@ -10,7 +11,6 @@ import DealRecommendations from "@/components/DealRecommendations";
 import DealRoomList from "@/components/deal-rooms/DealRoomList";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import OpportunityAlert from "@/components/OpportunityAlert";
-import type { User } from "@supabase/supabase-js";
 
 interface MyOpportunity {
   id: string;
@@ -30,10 +30,18 @@ interface UnlockedOpportunity {
   unlocked_at: string;
 }
 
+const DashboardLoading = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="text-sm text-muted-foreground animate-pulse">Loading dashboard…</div>
+  </div>
+);
+
 const Dashboard = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useSession();
+  const [profileLoading, setProfileLoading] = useState(true);
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [userRole, setUserRole] = useState<string>("business");
   const [trustScore, setTrustScore] = useState(0);
   const [verified, setVerified] = useState(false);
   const [agreementCount, setAgreementCount] = useState(0);
@@ -45,50 +53,71 @@ const Dashboard = () => {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (!session) navigate("/login");
-    });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (!session) navigate("/login");
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const role = user?.user_metadata?.role || "business";
-  const isBusiness = role === "business";
+  const role = userRole || user?.user_metadata?.role || "business";
+  const isBusiness = role === "business" || role === "business_owner";
 
   useEffect(() => {
-    if (!user) return;
-    const load = async () => {
-      // Profile + agreements + onboarding status (shared)
-      const [profileRes, agreementsRes] = await Promise.all([
-        supabase.from("profiles").select("trust_score, verification_status, onboarded").eq("id", user.id).single(),
-        supabase.from("agreements").select("id", { count: "exact", head: true }).eq("created_by", user.id),
-      ]);
-      
-      setTrustScore(Number(profileRes.data?.trust_score) || 0);
-      setVerified(profileRes.data?.verification_status === "verified");
-      
-      // Check onboarding status
-      const hasCompleted = profileRes.data?.onboarded === true;
-      setOnboarded(hasCompleted);
-      if (!hasCompleted) {
-        setShowOnboarding(true);
+    if (!user) {
+      setProfileLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadProfile = async () => {
+      setProfileLoading(true);
+      try {
+        const [profileRes, agreementsRes] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("trust_score, verification_status, onboarded, onboarded_at, user_role")
+            .eq("id", user.id)
+            .single(),
+          supabase
+            .from("agreements")
+            .select("id", { count: "exact", head: true })
+            .eq("created_by", user.id),
+        ]);
+
+        if (cancelled) return;
+
+        setTrustScore(Number(profileRes.data?.trust_score) || 0);
+        setVerified(profileRes.data?.verification_status === "verified");
+        setUserRole(profileRes.data?.user_role || "business");
+
+        const hasCompleted =
+          profileRes.data?.onboarded === true || Boolean(profileRes.data?.onboarded_at);
+        setOnboarded(hasCompleted);
+        setShowOnboarding(!hasCompleted);
+        setAgreementCount(agreementsRes.count || 0);
+      } finally {
+        if (!cancelled) setProfileLoading(false);
       }
-      
-      setAgreementCount(agreementsRes.count || 0);
+    };
 
-      if (isBusiness) {
-        // Business: my opportunities + unlock counts
+    loadProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || profileLoading || showOnboarding) return;
+
+    let cancelled = false;
+    const isBiz = userRole === "business" || userRole === "business_owner";
+
+    const loadDeals = async () => {
+      if (isBiz) {
         const { data: deals } = await supabase
           .from("deals")
           .select("id, title, funding_amount, industry, sector")
           .eq("created_by", user.id)
           .eq("is_removed", false)
           .order("created_at", { ascending: false });
+
+        if (cancelled) return;
+
         if (deals && deals.length > 0) {
           const ids = deals.map((d) => d.id);
           const { data: unlocks } = await supabase
@@ -96,34 +125,57 @@ const Dashboard = () => {
             .select("opportunity_id")
             .in("opportunity_id", ids);
           const counts: Record<string, number> = {};
-          (unlocks || []).forEach((u) => { counts[u.opportunity_id] = (counts[u.opportunity_id] || 0) + 1; });
+          (unlocks || []).forEach((u) => {
+            counts[u.opportunity_id] = (counts[u.opportunity_id] || 0) + 1;
+          });
           setMyOpps(deals.map((d) => ({ ...d, unlock_count: counts[d.id] || 0 })));
         } else {
           setMyOpps([]);
         }
       } else {
-        // Investor: opportunities I've unlocked
         const { data: unlocks } = await supabase
           .from("access_unlocks")
           .select("unlocked_at, opportunity_id")
           .eq("investor_id", user.id)
           .order("unlocked_at", { ascending: false });
+
+        if (cancelled) return;
+
         if (unlocks && unlocks.length > 0) {
           const ids = unlocks.map((u) => u.opportunity_id);
           const { data: deals } = await supabase
             .from("deals")
             .select("id, title, funding_amount, industry, sector")
             .in("id", ids);
-          const dealMap: Record<string, { id: string; title: string; funding_amount: number | null; industry: string | null; sector: string | null }> = {};
-          (deals || []).forEach((d) => { dealMap[d.id] = d; });
-          setMyUnlocks(unlocks.map((u) => ({ ...dealMap[u.opportunity_id], unlocked_at: u.unlocked_at })).filter((d) => d.id));
+          const dealMap: Record<
+            string,
+            {
+              id: string;
+              title: string;
+              funding_amount: number | null;
+              industry: string | null;
+              sector: string | null;
+            }
+          > = {};
+          (deals || []).forEach((d) => {
+            dealMap[d.id] = d;
+          });
+          setMyUnlocks(
+            unlocks
+              .map((u) => ({ ...dealMap[u.opportunity_id], unlocked_at: u.unlocked_at }))
+              .filter((d) => d.id)
+          );
         } else {
           setMyUnlocks([]);
         }
       }
     };
-    load();
-  }, [user, isBusiness]);
+
+    loadDeals();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, userRole, profileLoading, showOnboarding]);
 
   const totalUnlocks = myOpps.reduce((sum, o) => sum + o.unlock_count, 0);
 
@@ -143,9 +195,18 @@ const Dashboard = () => {
 
   const formatAmount = (n: number | null) => n ? `GH₵${n.toLocaleString()}` : "Negotiable";
 
-  // Show onboarding modal if not completed
-  if (showOnboarding && user) {
-    return <OnboardingFlow user={user} />;
+  const handleOnboardingComplete = useCallback(() => {
+    setShowOnboarding(false);
+    setOnboarded(true);
+    setProfileLoading(false);
+  }, []);
+
+  if (!user || profileLoading) {
+    return <DashboardLoading />;
+  }
+
+  if (showOnboarding) {
+    return <OnboardingFlow user={user} onComplete={handleOnboardingComplete} />;
   }
 
   return (

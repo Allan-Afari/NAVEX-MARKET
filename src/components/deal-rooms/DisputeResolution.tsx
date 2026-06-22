@@ -22,8 +22,8 @@ import type { User } from "@supabase/supabase-js";
 interface Dispute {
   id: string;
   deal_room_id: string;
-  initiator_id: string;
-  defendant_id: string;
+  initiated_by: string;
+  against_user: string;
   reason: string;
   description: string | null;
   status: "open" | "under-review" | "escalated" | "resolved" | "dismissed";
@@ -65,9 +65,9 @@ export const DisputeResolution = ({
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("dispute_resolutions")
+        .from("disputes")
         .select(
-          "*, initiator:initiator_id(full_name, email), defendant:defendant_id(full_name, email)"
+          "*, initiator:initiated_by(full_name, email), defendant:against_user(full_name, email)"
         )
         .eq("deal_room_id", dealRoomId)
         .order("created_at", { ascending: false });
@@ -93,10 +93,10 @@ export const DisputeResolution = ({
     try {
       setLoading(true);
 
-      const { error } = await supabase.from("dispute_resolutions").insert({
+      const { error } = await supabase.from("disputes").insert({
         deal_room_id: dealRoomId,
-        initiator_id: user.id,
-        defendant_id: newDispute.defendant_id,
+        initiated_by: user.id,
+        against_user: newDispute.defendant_id,
         reason: newDispute.reason,
         description: newDispute.description || null,
         status: "open",
@@ -177,7 +177,7 @@ export const DisputeResolution = ({
       }
 
       const { error } = await supabase
-        .from("dispute_resolutions")
+        .from("disputes")
         .update(updateData)
         .eq("id", disputeId);
 

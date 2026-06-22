@@ -1,4 +1,10 @@
 project_id = "dvuwffkgqlrebrbzbwta"
 
 [functions.smile-id-webhook]
+verify_jwt = false
+
+[functions.send-email-notification]
+verify_jwt = false
+
+[functions.smile-id-create-session]
 verify_jwt = true

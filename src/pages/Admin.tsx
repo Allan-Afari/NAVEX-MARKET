@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense, lazy } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/landing/Navbar";
@@ -14,9 +14,14 @@ import {
   Ban, ShieldCheck, Trash2, Eye, Briefcase
 } from "lucide-react";
 import { toast } from "sonner";
-import AdminComplianceDashboard from "@/components/AdminComplianceDashboard";
 import BulkImportDialog from "@/components/BulkImportDialog";
 import type { User } from "@supabase/supabase-js";
+
+const AdminComplianceDashboard = lazy(() => import("@/components/AdminComplianceDashboard"));
+
+const ChartFallback = () => (
+  <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">Loading charts…</div>
+);
 
 interface Profile {
   id: string;
@@ -38,6 +43,7 @@ interface Dispute {
   resolution: string | null;
   initiated_by: string | null;
   against_user: string | null;
+  deal_room_id: string | null;
   created_at: string;
 }
 
@@ -431,6 +437,9 @@ const Admin = () => {
                       <span className="text-xs text-muted-foreground">{new Date(d.created_at).toLocaleDateString()}</span>
                     </div>
                     <p className="text-sm truncate">{d.reason}</p>
+                    {d.deal_room_id && (
+                      <p className="text-xs text-muted-foreground mt-1">Deal room dispute</p>
+                    )}
                   </button>
                 ))}
               </div>
@@ -441,7 +450,9 @@ const Admin = () => {
         {/* Compliance Tab */}
         {activeTab === "compliance" && (
           <div className="space-y-4">
-            <AdminComplianceDashboard />
+            <Suspense fallback={<ChartFallback />}>
+              <AdminComplianceDashboard />
+            </Suspense>
           </div>
         )}
 

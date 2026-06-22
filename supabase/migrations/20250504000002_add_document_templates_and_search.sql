@@ -85,16 +85,20 @@ ALTER TABLE deal_view_analytics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bulk_import_logs ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for document_templates
+DROP POLICY IF EXISTS "Public templates visible to all" ON document_templates;
 CREATE POLICY "Public templates visible to all" ON document_templates
   FOR SELECT USING (is_public = TRUE);
 
+DROP POLICY IF EXISTS "Users can view their own templates" ON document_templates;
 CREATE POLICY "Users can view their own templates" ON document_templates
   FOR SELECT USING (created_by = auth.uid());
 
+DROP POLICY IF EXISTS "Users can create templates" ON document_templates;
 CREATE POLICY "Users can create templates" ON document_templates
   FOR INSERT WITH CHECK (created_by = auth.uid());
 
 -- RLS Policies for template_usage
+DROP POLICY IF EXISTS "Users can view template usage for their deal rooms" ON template_usage;
 CREATE POLICY "Users can view template usage for their deal rooms" ON template_usage
   FOR SELECT USING (
     deal_room_id IN (
@@ -105,24 +109,29 @@ CREATE POLICY "Users can view template usage for their deal rooms" ON template_u
   );
 
 -- RLS Policies for deal_scores
+DROP POLICY IF EXISTS "Scores visible for public deals" ON deal_scores;
 CREATE POLICY "Scores visible for public deals" ON deal_scores
   FOR SELECT USING (
-    deal_id IN (SELECT id FROM deals WHERE status = 'published')
+    deal_id IN (SELECT id FROM deals WHERE stage = 'published')
   );
 
 -- RLS Policies for saved_deals
+DROP POLICY IF EXISTS "Users can manage own saved deals" ON saved_deals;
 CREATE POLICY "Users can manage own saved deals" ON saved_deals
   FOR ALL USING (user_id = auth.uid());
 
 -- RLS Policies for deal_view_analytics
+DROP POLICY IF EXISTS "Analytics visible to deal creators" ON deal_view_analytics;
 CREATE POLICY "Analytics visible to deal creators" ON deal_view_analytics
   FOR SELECT USING (
     deal_id IN (SELECT id FROM deals WHERE created_by = auth.uid())
   );
 
 -- RLS Policies for bulk_import_logs
+DROP POLICY IF EXISTS "Users can view own import logs" ON bulk_import_logs;
 CREATE POLICY "Users can view own import logs" ON bulk_import_logs
   FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can create import logs" ON bulk_import_logs;
 CREATE POLICY "Users can create import logs" ON bulk_import_logs
   FOR INSERT WITH CHECK (user_id = auth.uid());

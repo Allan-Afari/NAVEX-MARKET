@@ -93,6 +93,14 @@ Deno.serve(async (req) => {
     const payload = JSON.parse(rawBody);
     console.log("Smile ID webhook payload:", JSON.stringify(payload));
 
+    const partnerParams = payload.PartnerParams ?? payload.partner_params ?? {};
+    const userId: string | undefined = partnerParams.user_id ?? partnerParams.userId;
+    const resultCode: string = String(
+      payload.ResultCode ?? payload.result_code ?? payload.resultCode ?? "",
+    );
+    const refId: string | undefined =
+      payload.SmileJobID ?? payload.smile_job_id ?? payload.ref_id ?? payload.job_id;
+
     if (!userId) {
       console.warn("Webhook missing user_id in partner_params");
       return new Response(JSON.stringify({ ok: false, error: "missing user_id" }), {

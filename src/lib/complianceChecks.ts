@@ -95,9 +95,9 @@ export const performComplianceCheck = async (
 
     // Check 5: Existing Disputes
     const { data: disputes } = await supabase
-      .from("dispute_resolutions")
+      .from("disputes")
       .select("*")
-      .or(`initiator_id.eq.${userId},defendant_id.eq.${userId}`)
+      .or(`initiated_by.eq.${userId},against_user.eq.${userId}`)
       .eq("status", "open");
 
     if (disputes && disputes.length > 0) {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/landing/Navbar";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ interface Dispute {
   resolution: string | null;
   initiated_by: string | null;
   against_user: string | null;
+  deal_room_id: string | null;
+  description: string | null;
   created_at: string;
 }
 
@@ -221,6 +223,17 @@ const Reputation = () => {
                         <span className="text-xs text-muted-foreground">{new Date(d.created_at).toLocaleDateString()}</span>
                       </div>
                       <p className="text-sm">{d.reason}</p>
+                      {d.description && (
+                        <p className="text-xs text-muted-foreground mt-1">{d.description}</p>
+                      )}
+                      {d.deal_room_id && (
+                        <Link
+                          to={`/deal-room/${d.deal_room_id}`}
+                          className="text-xs text-primary hover:underline mt-2 inline-block"
+                        >
+                          View deal room →
+                        </Link>
+                      )}
                       {d.resolution && (
                         <div className="mt-2 p-2 bg-accent/10 rounded-lg text-xs text-accent">
                           Resolution: {d.resolution}
