@@ -32,9 +32,10 @@ const AuthCallback = () => {
 
         // Exchange code for session
         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        
+
         if (exchangeError) {
-          toast.error(exchangeError.message || "Failed to confirm email");
+          console.error("Email confirmation error:", exchangeError);
+          toast.error(exchangeError.message || "Failed to confirm email. The link may have expired.");
           navigate("/login");
           return;
         }
@@ -43,7 +44,7 @@ const AuthCallback = () => {
           toast.success("Email confirmed successfully!");
           navigate("/dashboard");
         } else {
-          toast.error("No session created");
+          toast.error("No session created. Please try logging in.");
           navigate("/login");
         }
       } catch (err) {

@@ -18,7 +18,6 @@ import VideoConferenceButton from "@/components/deal-rooms/VideoConferenceButton
 import { ArrowLeft, ShieldCheck, Users, Lock, Clipboard } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 import { toast } from "sonner";
-import type { User } from "@supabase/supabase-js";
 
 const ActivityAuditDashboard = lazy(() => import("@/components/ActivityAuditDashboard"));
 
@@ -85,13 +84,14 @@ const DealRoomDetail = () => {
           .single();
 
         if (error) {
+          console.error("Deal room fetch error:", error);
           throw error;
         }
 
         setRoom(data);
         const participantCount = data.deal_room_participants?.length ?? 0;
         setParticipants(participantCount);
-        
+
         // Extract participant IDs
         const ids = data.deal_room_participants?.map((p: any) => p.user_id) ?? [];
         setParticipantIds(ids);
@@ -99,18 +99,22 @@ const DealRoomDetail = () => {
 
         setIsOwner(data.created_by === user.id);
         setIsEditor(data.deal_room_participants?.some((participant: any) => participant.user_id === user.id && participant.role === "editor") ?? false);
-        
+
         // Check if user is admin (you may need to adjust this based on your auth setup)
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .single();
-        
+
+        if (profileError) {
+          console.error("Profile fetch error:", profileError);
+        }
+
         setIsAdmin(profileData?.role === "admin");
       } catch (error) {
         console.error("Failed to load deal room:", error);
-        toast.error("Unable to open this deal room.");
+        toast.error("Unable to open this deal room. It may not exist or you may not have access.");
       } finally {
         setFetching(false);
       }

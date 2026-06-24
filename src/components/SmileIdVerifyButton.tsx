@@ -25,7 +25,7 @@ const SmileIdVerifyButton = ({ status, onStarted }: Props) => {
       }
       const link = response?.link;
       if (!link) {
-        toast.error("No verification link returned");
+        toast.error("No verification link returned. Smile ID may not be configured.");
         return;
       }
       onStarted?.();
@@ -33,7 +33,12 @@ const SmileIdVerifyButton = ({ status, onStarted }: Props) => {
       toast.success("Verification opened in new tab. Come back when done.");
     } catch (e: unknown) {
       const error = e as Error;
-      toast.error(error?.message || "Could not start Smile ID verification");
+      console.error("Smile ID verification error:", error);
+      if (error?.message?.includes("Smile ID not configured")) {
+        toast.error("Smile ID verification is not configured. Please contact admin or use manual document verification instead.");
+      } else {
+        toast.error(error?.message || "Could not start Smile ID verification");
+      }
     } finally {
       setLoading(false);
     }

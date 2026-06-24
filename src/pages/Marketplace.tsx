@@ -109,7 +109,10 @@ const fetchOpportunities = async ({ pageParam = 0, queryKey }: { pageParam?: num
   }
 
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) {
+    console.error("Marketplace fetch error:", error);
+    throw error;
+  }
 
   return data as Opportunity[];
 };
@@ -134,7 +137,7 @@ const Marketplace = () => {
       setUser(session?.user ?? null);
       setRole(session?.user?.user_metadata?.role || "investor");
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e: any, session: any) => {
       setUser(session?.user ?? null);
       setRole(session?.user?.user_metadata?.role || "investor");
     });

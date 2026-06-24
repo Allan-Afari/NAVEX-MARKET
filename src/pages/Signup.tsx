@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,22 +6,13 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Building2, Wallet, Phone, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Building2, Wallet } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 import { checkComplianceOnSignup } from "@/lib/complianceWorkflow";
 import { updateUserPrivacySettings, DEFAULT_PRIVACY_SETTINGS } from "@/lib/dataPrivacy";
 
 type Role = "business" | "investor";
-type Step = "role" | "details" | "phone" | "otp";
-
-const RESEND_COOLDOWN_SECONDS = 60;
-
-const normalizePhone = (raw: string) => {
-  const trimmed = raw.replace(/\s+/g, "");
-  if (trimmed.startsWith("+")) return trimmed;
-  if (trimmed.startsWith("0")) return `+233${trimmed.slice(1)}`;
-  return `+${trimmed}`;
-};
+type Step = "role" | "details";
 
 const Signup = () => {
   const [step, setStep] = useState<Step>("role");
@@ -29,32 +20,11 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  // Locked, normalized phone we sent the OTP to — never trust the input field after send.
-  const verifiedPhoneRef = useRef<string>("");
-  const pendingUserIdRef = useRef<string | null>(null);
-  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resendIn, setResendIn] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const otpInputRef = useRef<HTMLInputElement>(null);
 
-  // Resend cooldown ticker
-  useEffect(() => {
-    if (resendIn <= 0) return;
-    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [resendIn]);
-
-  // Auto-focus OTP input when step changes to otp
-  useEffect(() => {
-    if (step === "otp" && otpInputRef.current) {
-      otpInputRef.current.focus();
-    }
-  }, [step]);
-
-  // Step 1: Create the auth user (email/password). Then move to phone step.
+  // Step 1: Create the auth user (email/password)
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!role) return;
@@ -72,123 +42,25 @@ const Signup = () => {
       toast({ title: "Signup failed", description: error.message, variant: "destructive" });
       return;
     }
-    // Stash the user id from signUp — works whether or not email confirmation is on.
-    pendingUserIdRef.current = data.user?.id ?? null;
-    toast({ title: "Account created", description: "Now let's verify your phone number." });
-    setStep("phone");
-  };
 
-  // Send (or resend) the SMS OTP. Uses signInWithOtp which works with or without a session.
-  const sendOtp = async (targetPhone: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: targetPhone,
-      options: { shouldCreateUser: false }, // user already exists from signUp
-    });
-    if (error) throw error;
-  };
-
-  // Step 2: First send.
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const normalized = normalizePhone(phone);
-    try {
-      await sendOtp(normalized);
-      verifiedPhoneRef.current = normalized;
-      setPhone(normalized);
-      setResendIn(RESEND_COOLDOWN_SECONDS);
-      toast({ title: "Code sent", description: `We sent a 6-digit code to ${normalized}` });
-      setStep("otp");
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast({ title: "Couldn't send code", description: error.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Resend (no step change — stays on the OTP screen).
-  const handleResend = async () => {
-    if (resendIn > 0 || !verifiedPhoneRef.current) return;
-    setLoading(true);
-    try {
-      await sendOtp(verifiedPhoneRef.current);
-      setResendIn(RESEND_COOLDOWN_SECONDS);
-      setOtp("");
-      toast({ title: "Code resent", description: `New code sent to ${verifiedPhoneRef.current}` });
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast({ title: "Couldn't resend", description: error.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Step 3: Verify. signInWithOtp + verifyOtp({ type: "sms" }) gives us a real session
-  // tied to the current user, so we can safely persist phone_verified=true.
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const targetPhone = verifiedPhoneRef.current;
-    const { data, error } = await supabase.auth.verifyOtp({
-      phone: targetPhone,
-      token: otp,
-      type: "sms",
-    });
-    if (error || !data.session?.user) {
-      setLoading(false);
-      toast({
-        title: "Invalid code",
-        description: error?.message || "Could not verify the code. Please try again.",
-        variant: "destructive",
+    const userId = data.user?.id;
+    if (userId) {
+      // Trigger automatic compliance check on signup
+      await checkComplianceOnSignup(userId).catch((err) => {
+        console.error("Compliance check failed during signup:", err);
       });
-      return;
-    }
 
-    // The session user is now guaranteed authenticated — bind the phone to THIS user.
-    const authedUserId = data.session.user.id;
-    // Sanity check: must match the user we created at signUp (defends against any
-    // edge case where verifyOtp returns a different account).
-    if (pendingUserIdRef.current && pendingUserIdRef.current !== authedUserId) {
-      setLoading(false);
-      toast({
-        title: "Account mismatch",
-        description: "This phone is linked to a different account. Use a different number or log in.",
-        variant: "destructive",
+      // Initialize default privacy settings
+      await updateUserPrivacySettings(userId, {
+        ...DEFAULT_PRIVACY_SETTINGS,
+        email_marketing: true,
+        profile_visibility: "connections_only",
+      }).catch((err) => {
+        console.error("Failed to initialize privacy settings:", err);
       });
-      return;
     }
 
-    const { error: updErr } = await supabase
-      .from("profiles")
-      .update({ phone: targetPhone, phone_verified: true })
-      .eq("id", authedUserId);
-
-    setLoading(false);
-    if (updErr) {
-      toast({
-        title: "Phone verified, but profile update failed",
-        description: updErr.message,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Trigger automatic compliance check on signup
-    await checkComplianceOnSignup(authedUserId).catch((err) => {
-      console.error("Compliance check failed during signup:", err);
-    });
-
-    // Initialize default privacy settings
-    await updateUserPrivacySettings(authedUserId, {
-      ...DEFAULT_PRIVACY_SETTINGS,
-      email_marketing: true,
-      profile_visibility: "connections_only",
-    }).catch((err) => {
-      console.error("Failed to initialize privacy settings:", err);
-    });
-
-    toast({ title: "Phone verified ✅", description: "Welcome to Navex Market!" });
+    toast({ title: "Account created ✅", description: "Please check your email to confirm your account." });
     navigate("/dashboard");
   };
 
@@ -204,9 +76,7 @@ const Signup = () => {
 
   const stepLabel =
     step === "role" ? "Choose your role"
-    : step === "details" ? "Account details"
-    : step === "phone" ? "Verify your phone"
-    : "Enter verification code";
+    : "Account details";
 
   return (
     <div className="min-h-screen gradient-hero flex items-center justify-center px-4 py-8">
@@ -222,8 +92,8 @@ const Signup = () => {
             <p className="text-sm text-muted-foreground">{stepLabel}</p>
             {/* Progress dots */}
             <div className="flex justify-center gap-1.5 mt-4">
-              {(["role", "details", "phone", "otp"] as Step[]).map((s, i) => {
-                const currentIdx = ["role", "details", "phone", "otp"].indexOf(step);
+              {(["role", "details"] as Step[]).map((s, i) => {
+                const currentIdx = ["role", "details"].indexOf(step);
                 return (
                   <div
                     key={s}
@@ -292,80 +162,8 @@ const Signup = () => {
                 <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 characters" className="mt-1 bg-secondary border-border" minLength={6} required />
               </div>
               <Button type="submit" className="w-full gradient-primary text-primary-foreground hover:opacity-90" disabled={loading}>
-                {loading ? "Creating account..." : "Continue"}
+                {loading ? "Creating account..." : "Create Account"}
               </Button>
-            </form>
-          )}
-
-          {step === "phone" && (
-            <form onSubmit={handleSendOtp} className="space-y-4">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mx-auto">
-                <Phone className="w-5 h-5" />
-              </div>
-              <p className="text-sm text-muted-foreground text-center">
-                We'll send a 6-digit code by SMS to verify you're a real person. This helps keep Navex Market safe.
-              </p>
-              <div>
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+233 24 123 4567"
-                  className="mt-1 bg-secondary border-border"
-                  required
-                />
-                <p className="text-xs text-muted-foreground mt-1">Ghana numbers starting with 0 will be auto-formatted to +233.</p>
-              </div>
-              <Button type="submit" className="w-full gradient-primary text-primary-foreground hover:opacity-90" disabled={loading}>
-                {loading ? "Sending code..." : "Send Code"}
-              </Button>
-            </form>
-          )}
-
-          {step === "otp" && (
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mx-auto">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <p className="text-sm text-muted-foreground text-center">
-                Enter the 6-digit code sent to <strong>{phone}</strong>
-              </p>
-              <div>
-                <Label htmlFor="otp">Verification Code</Label>
-                <Input
-                  ref={otpInputRef}
-                  id="otp"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                  placeholder="000000"
-                  className="mt-1 bg-secondary border-border text-center text-lg tracking-widest"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full gradient-primary text-primary-foreground hover:opacity-90" disabled={loading || otp.length !== 6}>
-                {loading ? "Verifying..." : "Verify & Continue"}
-              </Button>
-              <div className="flex items-center justify-between text-xs">
-                <button
-                  type="button"
-                  onClick={() => setStep("phone")}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  Wrong number?
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={resendIn > 0 || loading}
-                  className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-not-allowed"
-                >
-                  {resendIn > 0 ? `Resend code in ${resendIn}s` : "Resend code"}
-                </button>
-              </div>
             </form>
           )}
 
