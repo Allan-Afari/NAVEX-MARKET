@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Users, Briefcase, Shield, ArrowRight, ArrowLeft } from "lucide-react";
+import { CheckCircle2, Users, Briefcase, Shield, ArrowRight, ArrowLeft, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
+import SmileIdVerifyButton from "@/components/SmileIdVerifyButton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { User } from "@supabase/supabase-js";
 
 interface OnboardingData {
@@ -194,7 +196,19 @@ export const OnboardingFlow = ({
           {currentStep === 1 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Full Name *</label>
+                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                  Full Name *
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Your legal name as it appears on official documents</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </label>
                 <Input
                   value={data.full_name}
                   onChange={(e) => setData((prev) => ({ ...prev, full_name: e.target.value }))}
@@ -204,8 +218,18 @@ export const OnboardingFlow = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
                   {data.role === "business" ? "Business Name" : "Company/Organization"} *
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">The legal name of your business or organization</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </label>
                 <Input
                   value={data.company_name}
@@ -216,7 +240,19 @@ export const OnboardingFlow = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Location *</label>
+                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                  Location *
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Your city and country for deal matching</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </label>
                 <Input
                   value={data.location}
                   onChange={(e) => setData((prev) => ({ ...prev, location: e.target.value }))}
@@ -226,7 +262,19 @@ export const OnboardingFlow = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Bio (Optional)</label>
+                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                  Bio (Optional)
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">A brief description to help others understand your background</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </label>
                 <Textarea
                   value={data.bio}
                   onChange={(e) => setData((prev) => ({ ...prev, bio: e.target.value }))}
@@ -272,18 +320,29 @@ export const OnboardingFlow = ({
 
           {/* Step 3: Verification */}
           {currentStep === 3 && (
-            <div className="text-center py-6">
+            <div className="text-center py-6 space-y-4">
               <Shield className="w-12 h-12 text-primary mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">Verify Your Identity (Optional)</h3>
-              <p className="text-sm text-muted-foreground mb-6">
-                Identity verification unlocks more features and builds trust. You can skip this now and verify later from your profile settings.
+              <h3 className="font-semibold mb-2">Verify Your Identity</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Verify now to unlock all features and build trust with other users
               </p>
-              <div className="bg-accent/10 border border-accent rounded-lg p-4 text-sm mb-6">
-                <p className="text-muted-foreground">
+              <div className="bg-accent/10 border border-accent rounded-lg p-4 text-sm mb-4">
+                <p className="text-muted-foreground text-left">
                   ✓ Verified users receive priority in deal matching<br />
-                  ✓ Higher trust scores unlock premium features
+                  ✓ Higher trust scores unlock premium features<br />
+                  ✓ Access to advanced deal room features
                 </p>
               </div>
+              <div className="flex justify-center">
+                <SmileIdVerifyButton 
+                  userId={user.id} 
+                  status={null}
+                  onStarted={() => setCurrentStep(4)} 
+                />
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setCurrentStep(4)} className="w-full text-muted-foreground">
+                Skip for now (verify later in profile)
+              </Button>
             </div>
           )}
 

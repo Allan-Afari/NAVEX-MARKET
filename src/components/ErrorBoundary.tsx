@@ -23,7 +23,7 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
-    // Here you could send to error tracking service
+    // Error is automatically sent to Sentry via the Sentry.ErrorBoundary wrapper
   }
 
   render() {

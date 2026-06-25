@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,24 +9,16 @@ import {
   Clock,
   TrendingUp,
   Download,
-  Filter,
   CheckSquare,
   ArrowUp,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LineChart,
-  Line,
 } from "recharts";
 import { toast } from "sonner";
 import {
@@ -154,13 +145,6 @@ const AdminComplianceDashboard = () => {
     high: "bg-orange-100 text-orange-800",
     medium: "bg-yellow-100 text-yellow-800",
     low: "bg-blue-100 text-blue-800",
-  };
-
-  const severityBgColor = {
-    critical: "#ef4444",
-    high: "#f97316",
-    medium: "#eab308",
-    low: "#3b82f6",
   };
 
   if (loading) {

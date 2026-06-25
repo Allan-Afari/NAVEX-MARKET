@@ -18,6 +18,7 @@ import VideoConferenceButton from "@/components/deal-rooms/VideoConferenceButton
 import { ArrowLeft, ShieldCheck, Users, Lock, Clipboard } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 import { toast } from "sonner";
+import { PageLoader, CardLoader } from "@/components/ui/LoadingSpinner";
 
 const ActivityAuditDashboard = lazy(() => import("@/components/ActivityAuditDashboard"));
 
@@ -138,11 +139,7 @@ const DealRoomDetail = () => {
   };
 
   if (loading || !user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin w-10 h-10 rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
+    return <PageLoader text="Loading..." />;
   }
 
   if (!id || (!room && !fetching)) {

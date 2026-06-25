@@ -11,6 +11,7 @@ import DealRecommendations from "@/components/DealRecommendations";
 import DealRoomList from "@/components/deal-rooms/DealRoomList";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import OpportunityAlert from "@/components/OpportunityAlert";
+import { WelcomeTour } from "@/components/WelcomeTour";
 
 interface MyOpportunity {
   id: string;
@@ -41,6 +42,8 @@ const Dashboard = () => {
   const [profileLoading, setProfileLoading] = useState(true);
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+  const [dismissedTour, setDismissedTour] = useState(false);
   const [userRole, setUserRole] = useState<string>("business");
   const [trustScore, setTrustScore] = useState(0);
   const [verified, setVerified] = useState(false);
@@ -201,6 +204,20 @@ const Dashboard = () => {
     setProfileLoading(false);
   }, []);
 
+  useEffect(() => {
+    // Show tour for newly onboarded users
+    const hasSeenTour = localStorage.getItem("hasSeenTour");
+    if (onboarded && !hasSeenTour && !dismissedTour && !showOnboarding) {
+      setShowTour(true);
+    }
+  }, [onboarded, dismissedTour, showOnboarding]);
+
+  const handleTourComplete = () => {
+    localStorage.setItem("hasSeenTour", "true");
+    setShowTour(false);
+    setDismissedTour(true);
+  };
+
   if (!user || profileLoading) {
     return <DashboardLoading />;
   }
@@ -213,6 +230,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <SEOHead title="Dashboard" description="Your Navex Market dashboard — manage investment opportunities and unlocks" />
       <Navbar />
+      {showTour && <WelcomeTour onComplete={handleTourComplete} />}
       {user && !isBusiness && <OpportunityAlert userId={user.id} />}
       <div className="container px-4 pt-24 pb-12">
         <div className="flex items-center justify-between mb-8 gap-3 flex-wrap">

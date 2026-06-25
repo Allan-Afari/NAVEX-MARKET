@@ -41,6 +41,10 @@ interface MarketplaceFilters {
   industry: string;
   rangeIndex: number;
   sortBy: string;
+  stage: string;
+  location: string;
+  fundingType: string;
+  verifiedOnly: boolean;
 }
 
 const PAGE_SIZE = 12;
