@@ -84,6 +84,25 @@ const Dashboard = () => {
 
         if (cancelled) return;
 
+        if (profileRes.error) {
+          console.error("Profile fetch error:", profileRes.error);
+          // If profile doesn't exist, create a default one
+          if (profileRes.error.code === 'PGRST116') {
+            const { error: insertError } = await supabase
+              .from("profiles")
+              .insert({
+                id: user.id,
+                trust_score: 0,
+                verification_status: "pending",
+                onboarded: false,
+                user_role: "business",
+              });
+            if (insertError) {
+              console.error("Profile creation error:", insertError);
+            }
+          }
+        }
+
         setTrustScore(Number(profileRes.data?.trust_score) || 0);
         setVerified(profileRes.data?.verification_status === "verified");
         setUserRole(profileRes.data?.user_role || "business");
@@ -93,6 +112,8 @@ const Dashboard = () => {
         setOnboarded(hasCompleted);
         setShowOnboarding(!hasCompleted);
         setAgreementCount(agreementsRes.count || 0);
+      } catch (error) {
+        console.error("Dashboard profile load error:", error);
       } finally {
         if (!cancelled) setProfileLoading(false);
       }
