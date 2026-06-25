@@ -132,66 +132,88 @@ const Dashboard = () => {
     const isBiz = userRole === "business" || userRole === "business_owner";
 
     const loadDeals = async () => {
-      if (isBiz) {
-        const { data: deals } = await supabase
-          .from("deals")
-          .select("id, title, funding_amount, industry, sector")
-          .eq("created_by", user.id)
-          .eq("is_removed", false)
-          .order("created_at", { ascending: false });
-
-        if (cancelled) return;
-
-        if (deals && deals.length > 0) {
-          const ids = deals.map((d) => d.id);
-          const { data: unlocks } = await supabase
-            .from("access_unlocks")
-            .select("opportunity_id")
-            .in("opportunity_id", ids);
-          const counts: Record<string, number> = {};
-          (unlocks || []).forEach((u) => {
-            counts[u.opportunity_id] = (counts[u.opportunity_id] || 0) + 1;
-          });
-          setMyOpps(deals.map((d) => ({ ...d, unlock_count: counts[d.id] || 0 })));
-        } else {
-          setMyOpps([]);
-        }
-      } else {
-        const { data: unlocks } = await supabase
-          .from("access_unlocks")
-          .select("unlocked_at, opportunity_id")
-          .eq("investor_id", user.id)
-          .order("unlocked_at", { ascending: false });
-
-        if (cancelled) return;
-
-        if (unlocks && unlocks.length > 0) {
-          const ids = unlocks.map((u) => u.opportunity_id);
-          const { data: deals } = await supabase
+      try {
+        if (isBiz) {
+          const { data: deals, error: dealsError } = await supabase
             .from("deals")
             .select("id, title, funding_amount, industry, sector")
-            .in("id", ids);
-          const dealMap: Record<
-            string,
-            {
-              id: string;
-              title: string;
-              funding_amount: number | null;
-              industry: string | null;
-              sector: string | null;
+            .eq("created_by", user.id)
+            .eq("is_removed", false)
+            .order("created_at", { ascending: false })
+            .limit(20);
+
+          if (cancelled || dealsError) {
+            console.error("Deals fetch error:", dealsError);
+            return;
+          }
+
+          if (deals && deals.length > 0) {
+            const ids = deals.map((d) => d.id);
+            const { data: unlocks, error: unlocksError } = await supabase
+              .from("access_unlocks")
+              .select("opportunity_id")
+              .in("opportunity_id", ids);
+            
+            if (unlocksError) {
+              console.error("Unlocks fetch error:", unlocksError);
             }
-          > = {};
-          (deals || []).forEach((d) => {
-            dealMap[d.id] = d;
-          });
-          setMyUnlocks(
-            unlocks
-              .map((u) => ({ ...dealMap[u.opportunity_id], unlocked_at: u.unlocked_at }))
-              .filter((d) => d.id)
-          );
+
+            const counts: Record<string, number> = {};
+            (unlocks || []).forEach((u) => {
+              counts[u.opportunity_id] = (counts[u.opportunity_id] || 0) + 1;
+            });
+            setMyOpps(deals.map((d) => ({ ...d, unlock_count: counts[d.id] || 0 })));
+          } else {
+            setMyOpps([]);
+          }
         } else {
-          setMyUnlocks([]);
+          const { data: unlocks, error: unlocksError } = await supabase
+            .from("access_unlocks")
+            .select("unlocked_at, opportunity_id")
+            .eq("investor_id", user.id)
+            .order("unlocked_at", { ascending: false })
+            .limit(20);
+
+          if (cancelled || unlocksError) {
+            console.error("Investor unlocks fetch error:", unlocksError);
+            return;
+          }
+
+          if (unlocks && unlocks.length > 0) {
+            const ids = unlocks.map((u) => u.opportunity_id);
+            const { data: deals, error: dealsError } = await supabase
+              .from("deals")
+              .select("id, title, funding_amount, industry, sector")
+              .in("id", ids);
+            
+            if (dealsError) {
+              console.error("Deals fetch error:", dealsError);
+            }
+
+            const dealMap: Record<
+              string,
+              {
+                id: string;
+                title: string;
+                funding_amount: number | null;
+                industry: string | null;
+                sector: string | null;
+              }
+            > = {};
+            (deals || []).forEach((d) => {
+              dealMap[d.id] = d;
+            });
+            setMyUnlocks(
+              unlocks
+                .map((u) => ({ ...dealMap[u.opportunity_id], unlocked_at: u.unlocked_at }))
+                .filter((d) => d.id)
+            );
+          } else {
+            setMyUnlocks([]);
+          }
         }
+      } catch (error) {
+        console.error("Dashboard loadDeals error:", error);
       }
     };
 
