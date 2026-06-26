@@ -98,18 +98,33 @@ const DealDetail = () => {
   useEffect(() => {
     if (!id || !user) return;
     const fetchDeal = async () => {
-      const [dealRes, interestsRes, milestonesRes, activityRes, updatesRes] = await Promise.all([
-        supabase.from("deals").select("*").eq("id", id).single(),
-        supabase.from("deal_interests").select("*").eq("deal_id", id).order("created_at", { ascending: false }),
-        supabase.from("deal_milestones").select("*").eq("deal_id", id).order("created_at", { ascending: true }),
-        supabase.from("deal_activity_log").select("*").eq("deal_id", id).order("created_at", { ascending: false }).limit(20),
-        supabase.from("deal_updates").select("*").eq("deal_id", id).order("created_at", { ascending: false }),
-      ]);
-      if (dealRes.data) setDeal(dealRes.data as Deal);
-      if (interestsRes.data) setInterests(interestsRes.data);
-      if (milestonesRes.data) setMilestones(milestonesRes.data);
-      if (activityRes.data) setActivity(activityRes.data);
-      if (updatesRes.data) setUpdates(updatesRes.data);
+      try {
+        const [dealRes, interestsRes, milestonesRes, activityRes, updatesRes] = await Promise.all([
+          supabase.from("deals").select("*").eq("id", id).single(),
+          supabase.from("deal_interests").select("*").eq("deal_id", id).order("created_at", { ascending: false }).limit(50),
+          supabase.from("deal_milestones").select("*").eq("deal_id", id).order("created_at", { ascending: true }).limit(50),
+          supabase.from("deal_activity_log").select("*").eq("deal_id", id).order("created_at", { ascending: false }).limit(20),
+          supabase.from("deal_updates").select("*").eq("deal_id", id).order("created_at", { ascending: false }).limit(20),
+        ]);
+        
+        if (dealRes.error) {
+          console.error("Deal fetch error:", dealRes.error);
+          return;
+        }
+        
+        if (interestsRes.error) console.error("Interests fetch error:", interestsRes.error);
+        if (milestonesRes.error) console.error("Milestones fetch error:", milestonesRes.error);
+        if (activityRes.error) console.error("Activity fetch error:", activityRes.error);
+        if (updatesRes.error) console.error("Updates fetch error:", updatesRes.error);
+
+        if (dealRes.data) setDeal(dealRes.data as Deal);
+        if (interestsRes.data) setInterests(interestsRes.data);
+        if (milestonesRes.data) setMilestones(milestonesRes.data);
+        if (activityRes.data) setActivity(activityRes.data);
+        if (updatesRes.data) setUpdates(updatesRes.data);
+      } catch (error) {
+        console.error("DealDetail fetch error:", error);
+      }
     };
     fetchDeal();
   }, [id, user]);

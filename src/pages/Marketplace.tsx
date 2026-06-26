@@ -71,54 +71,59 @@ const fetchOpportunities = async ({ pageParam = 0, queryKey }: { pageParam?: num
   const { search, industry, rangeIndex, sortBy } = filters;
   const range = FUNDING_RANGES[rangeIndex];
 
-  let query = supabase
-    .from("deals")
-    .select("*")
-    .eq("is_removed", false)
-    .range(pageParam, pageParam + PAGE_SIZE - 1);
+  try {
+    let query = supabase
+      .from("deals")
+      .select("*")
+      .eq("is_removed", false)
+      .range(pageParam, pageParam + PAGE_SIZE - 1);
 
-  const filterClauses: string[] = [];
+    const filterClauses: string[] = [];
 
-  if (search) {
-    const term = `%${search.replace(/%/g, "\\%").replace(/_/g, "\\_")}%`;
-    filterClauses.push(`title.ilike.${term},industry.ilike.${term},sector.ilike.${term},location.ilike.${term}`);
-  }
+    if (search) {
+      const term = `%${search.replace(/%/g, "\\%").replace(/_/g, "\\_")}%`;
+      filterClauses.push(`title.ilike.${term},industry.ilike.${term},sector.ilike.${term},location.ilike.${term}`);
+    }
 
-  if (industry) {
-    filterClauses.push(`industry.eq.${industry},sector.eq.${industry}`);
-  }
+    if (industry) {
+      filterClauses.push(`industry.eq.${industry},sector.eq.${industry}`);
+    }
 
-  if (filterClauses.length > 0) {
-    query = query.or(filterClauses.join(","));
-  }
+    if (filterClauses.length > 0) {
+      query = query.or(filterClauses.join(","));
+    }
 
-  if (range.min > 0 && range.max < Infinity) {
-    query = query.gte("funding_amount", range.min).lte("funding_amount", range.max);
-  } else if (range.min > 0) {
-    query = query.gte("funding_amount", range.min);
-  }
+    if (range.min > 0 && range.max < Infinity) {
+      query = query.gte("funding_amount", range.min).lte("funding_amount", range.max);
+    } else if (range.min > 0) {
+      query = query.gte("funding_amount", range.min);
+    }
 
-  switch (sortBy) {
-    case "funding_asc":
-      query = query.order("funding_amount", { ascending: true, nulls: "last" });
-      break;
-    case "funding_desc":
-      query = query.order("funding_amount", { ascending: false, nulls: "last" });
-      break;
-    case "featured":
-      query = query.order("is_featured", { ascending: false }).order("created_at", { ascending: false });
-      break;
-    default:
-      query = query.order("created_at", { ascending: false });
-  }
+    switch (sortBy) {
+      case "funding_asc":
+        query = query.order("funding_amount", { ascending: true, nulls: "last" });
+        break;
+      case "funding_desc":
+        query = query.order("funding_amount", { ascending: false, nulls: "last" });
+        break;
+      case "featured":
+        query = query.order("is_featured", { ascending: false }).order("created_at", { ascending: false });
+        break;
+      default:
+        query = query.order("created_at", { ascending: false });
+    }
 
-  const { data, error } = await query;
-  if (error) {
+    const { data, error } = await query;
+    if (error) {
+      console.error("Marketplace fetch error:", error);
+      throw error;
+    }
+
+    return data as Opportunity[];
+  } catch (error) {
     console.error("Marketplace fetch error:", error);
     throw error;
   }
-
-  return data as Opportunity[];
 };
 
 

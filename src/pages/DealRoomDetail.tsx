@@ -86,7 +86,8 @@ const DealRoomDetail = () => {
 
         if (error) {
           console.error("Deal room fetch error:", error);
-          throw error;
+          toast.error("Unable to open this deal room. It may not exist or you may not have access.");
+          return;
         }
 
         setRoom(data);

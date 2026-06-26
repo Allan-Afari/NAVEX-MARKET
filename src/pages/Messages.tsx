@@ -59,11 +59,20 @@ const Messages = () => {
   useEffect(() => {
     if (!user) return;
     const fetchConvos = async () => {
-      const { data } = await supabase
-        .from("conversations")
-        .select("*")
-        .order("updated_at", { ascending: false });
-      if (data) setConversations(data);
+      try {
+        const { data, error } = await supabase
+          .from("conversations")
+          .select("*")
+          .order("updated_at", { ascending: false })
+          .limit(50);
+        if (error) {
+          console.error("Conversations fetch error:", error);
+          return;
+        }
+        if (data) setConversations(data);
+      } catch (error) {
+        console.error("Messages conversations fetch error:", error);
+      }
     };
     fetchConvos();
   }, [user]);
@@ -71,22 +80,35 @@ const Messages = () => {
   useEffect(() => {
     if (!activeConvo) return;
     const fetchMessages = async () => {
-      const { data } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("conversation_id", activeConvo)
-        .order("created_at", { ascending: true });
-      if (data) {
-        setMessages(data);
-        const senderIds = [...new Set(data.map((m) => m.sender_id).filter(Boolean))] as string[];
-        if (senderIds.length > 0) {
-          const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", senderIds);
-          if (profs) {
-            const map: Record<string, Profile> = {};
-            profs.forEach((p) => (map[p.id] = p));
-            setProfiles((prev) => ({ ...prev, ...map }));
+      try {
+        const { data, error } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("conversation_id", activeConvo)
+          .order("created_at", { ascending: true })
+          .limit(100);
+        
+        if (error) {
+          console.error("Messages fetch error:", error);
+          return;
+        }
+        
+        if (data) {
+          setMessages(data);
+          const senderIds = [...new Set(data.map((m) => m.sender_id).filter(Boolean))] as string[];
+          if (senderIds.length > 0) {
+            const { data: profs, error: profError } = await supabase.from("profiles").select("id, full_name").in("id", senderIds);
+            if (profError) {
+              console.error("Profiles fetch error:", profError);
+            } else if (profs) {
+              const map: Record<string, Profile> = {};
+              profs.forEach((p) => (map[p.id] = p));
+              setProfiles((prev) => ({ ...prev, ...map }));
+            }
           }
         }
+      } catch (error) {
+        console.error("Messages fetch error:", error);
       }
     };
     fetchMessages();
