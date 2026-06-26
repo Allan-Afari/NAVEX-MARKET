@@ -41,10 +41,10 @@ interface MarketplaceFilters {
   industry: string;
   rangeIndex: number;
   sortBy: string;
-  stage: string;
-  location: string;
-  fundingType: string;
-  verifiedOnly: boolean;
+  stage?: string;
+  location?: string;
+  fundingType?: string;
+  verifiedOnly?: boolean;
 }
 
 const PAGE_SIZE = 12;
@@ -56,6 +56,100 @@ const FUNDING_RANGES = [
   { label: "GH₵10K – 100K", min: 10000, max: 100000 },
   { label: "GH₵100K – 1M", min: 100000, max: 1000000 },
   { label: "Over GH₵1M", min: 1000000, max: Infinity },
+];
+
+// Demo deals to show marketplace activity when no real deals exist
+const DEMO_DEALS: Opportunity[] = [
+  {
+    id: "demo-1",
+    title: "Series A Funding for Ghanaian Agritech Startup",
+    description: "We're building AI-powered farming solutions for smallholder farmers across Ghana. Seeking expansion capital to reach 10,000 farmers.",
+    industry: "Agriculture",
+    sector: "Agriculture",
+    location: "Accra, Ghana",
+    funding_amount: 250000,
+    funding_type: "equity",
+    expected_return: "25% IRR over 3 years",
+    stage: "published",
+    is_featured: true,
+    created_by: null,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-2",
+    title: "Solar Energy Installation for Rural Communities",
+    description: "Deploying solar microgrids in off-grid communities. Proven model with 5 successful pilot sites.",
+    industry: "Energy",
+    sector: "Energy",
+    location: "Kumasi, Ghana",
+    funding_amount: 150000,
+    funding_type: "loan",
+    expected_return: "12% annual interest",
+    stage: "published",
+    is_featured: true,
+    created_by: null,
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: "demo-3",
+    title: "E-commerce Platform for African Artisans",
+    description: "Connecting Ghanaian artisans with global markets. Already generating revenue with 500+ active sellers.",
+    industry: "Technology",
+    sector: "Technology",
+    location: "Lagos, Nigeria",
+    funding_amount: 500000,
+    funding_type: "equity",
+    expected_return: "30% IRR over 4 years",
+    stage: "published",
+    is_featured: false,
+    created_by: null,
+    created_at: new Date(Date.now() - 172800000).toISOString(),
+  },
+  {
+    id: "demo-4",
+    title: "Healthcare Clinic Expansion in Northern Ghana",
+    description: "Expanding affordable healthcare access. Currently serving 5,000 patients monthly with plans to triple capacity.",
+    industry: "Healthcare",
+    sector: "Healthcare",
+    location: "Tamale, Ghana",
+    funding_amount: 75000,
+    funding_type: "revenue_share",
+    expected_return: "15% revenue share for 5 years",
+    stage: "published",
+    is_featured: false,
+    created_by: null,
+    created_at: new Date(Date.now() - 259200000).toISOString(),
+  },
+  {
+    id: "demo-5",
+    title: "Cold Chain Logistics for Food Distribution",
+    description: "Temperature-controlled storage and transport network reducing food waste by 40%. Seeking expansion capital.",
+    industry: "Manufacturing",
+    sector: "Manufacturing",
+    location: "Tema, Ghana",
+    funding_amount: 400000,
+    funding_type: "equity",
+    expected_return: "20% IRR over 3 years",
+    stage: "published",
+    is_featured: true,
+    created_by: null,
+    created_at: new Date(Date.now() - 345600000).toISOString(),
+  },
+  {
+    id: "demo-6",
+    title: "EdTech Platform for STEM Education",
+    description: "Interactive learning platform for secondary school students. Pilot program showed 40% improvement in test scores.",
+    industry: "Education",
+    sector: "Education",
+    location: "Accra, Ghana",
+    funding_amount: 100000,
+    funding_type: "equity",
+    expected_return: "22% IRR over 4 years",
+    stage: "published",
+    is_featured: false,
+    created_by: null,
+    created_at: new Date(Date.now() - 432000000).toISOString(),
+  },
 ];
 
 const SORT_OPTIONS = [
@@ -136,7 +230,7 @@ const Marketplace = () => {
     title: "", description: "", industry: "", location: "", funding_amount: "", funding_type: "equity", expected_return: "",
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [filters, setFilters] = useState<MarketplaceFilters>({ search: "", industry: "", rangeIndex: 0, sortBy: "newest" });
+  const [filters, setFilters] = useState<MarketplaceFilters>({ search: "", industry: "", rangeIndex: 0, sortBy: "newest", stage: undefined, location: undefined, fundingType: undefined, verifiedOnly: undefined });
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -168,7 +262,19 @@ const Marketplace = () => {
     keepPreviousData: true,
   });
 
-  const allOpportunities = useMemo(() => data?.pages.flat() ?? [], [data]);
+  const allOpportunities = useMemo(() => {
+    const realDeals = data?.pages.flat() ?? [];
+    // Show demo deals if no real deals exist
+    if (realDeals.length === 0 && !isLoading && !error) {
+      return DEMO_DEALS;
+    }
+    return realDeals;
+  }, [data, isLoading, error]);
+
+  const isDemoMode = useMemo(() => {
+    const realDeals = data?.pages.flat() ?? [];
+    return realDeals.length === 0 && !isLoading && !error;
+  }, [data, isLoading, error]);
 
   const creatorIds = useMemo(
     () => [...new Set(allOpportunities.map((deal) => deal.created_by).filter(Boolean))] as string[],
@@ -541,15 +647,24 @@ const Marketplace = () => {
           </div>
         ) : (
           <>
+            {isDemoMode && (
+              <div className="glass rounded-xl p-4 mb-6 border-l-4 border-l-primary bg-primary/5">
+                <p className="text-sm text-primary font-medium">
+                  🎯 Demo Mode: These are example opportunities to showcase the platform. Post your own deal to get started!
+                </p>
+              </div>
+            )}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {sortedOpportunities.map((opp) => {
                 const industry = opp.industry || opp.sector;
                 const isVerified = opp.created_by ? verifiedCreators.has(opp.created_by) : false;
+                const isDemo = opp.id.startsWith('demo-');
                 return (
                   <button
                     key={opp.id}
-                    onClick={() => navigate(`/deals/${opp.id}`)}
-                    className="glass rounded-xl p-5 text-left hover:bg-muted/20 transition-all hover:glow-primary group"
+                    onClick={() => isDemo ? null : navigate(`/deals/${opp.id}`)}
+                    className={`glass rounded-xl p-5 text-left hover:bg-muted/20 transition-all hover:glow-primary group ${isDemo ? 'cursor-not-allowed opacity-75' : ''}`}
+                    disabled={isDemo}
                   >
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       {isVerified && <VerifiedBadge />}
@@ -583,14 +698,18 @@ const Marketplace = () => {
                       <span className="text-[10px] text-muted-foreground capitalize">{opp.funding_type.replace(/_/g, " ")}</span>
                     </div>
                     <div className="mt-3 pt-3 border-t border-border">
-                      <DealQualityScoreDisplay dealId={opp.id} compact={true} />
+                      {isDemo ? (
+                        <div className="text-xs text-muted-foreground italic">Demo - Quality score not available</div>
+                      ) : (
+                        <DealQualityScoreDisplay dealId={opp.id} compact={true} />
+                      )}
                     </div>
                   </button>
                 );
               })}
             </div>
 
-            {hasNextPage && (
+            {!isDemoMode && hasNextPage && (
               <div className="mt-8 flex justify-center">
                 <Button onClick={() => fetchNextPage()} disabled={isFetching}>
                   {isFetching ? "Loading more..." : "Load more opportunities"}
