@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Search, Building2, MapPin, Star, Plus, X, TrendingUp, Filter,
+  Search, Building2, MapPin, Star, Plus, X, TrendingUp, Filter, Eye,
 } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 import VerifiedBadge from "@/components/VerifiedBadge";
@@ -34,6 +34,7 @@ interface Opportunity {
   is_featured: boolean;
   created_by: string | null;
   created_at: string;
+  deal_interests?: { count: number };
 }
 
 interface MarketplaceFilters {
@@ -74,6 +75,7 @@ const DEMO_DEALS: Opportunity[] = [
     is_featured: true,
     created_by: null,
     created_at: new Date().toISOString(),
+    deal_interests: { count: 12 },
   },
   {
     id: "demo-2",
@@ -89,6 +91,7 @@ const DEMO_DEALS: Opportunity[] = [
     is_featured: true,
     created_by: null,
     created_at: new Date(Date.now() - 86400000).toISOString(),
+    deal_interests: { count: 8 },
   },
   {
     id: "demo-3",
@@ -104,6 +107,7 @@ const DEMO_DEALS: Opportunity[] = [
     is_featured: false,
     created_by: null,
     created_at: new Date(Date.now() - 172800000).toISOString(),
+    deal_interests: { count: 23 },
   },
   {
     id: "demo-4",
@@ -119,6 +123,7 @@ const DEMO_DEALS: Opportunity[] = [
     is_featured: false,
     created_by: null,
     created_at: new Date(Date.now() - 259200000).toISOString(),
+    deal_interests: { count: 5 },
   },
   {
     id: "demo-5",
@@ -134,6 +139,7 @@ const DEMO_DEALS: Opportunity[] = [
     is_featured: true,
     created_by: null,
     created_at: new Date(Date.now() - 345600000).toISOString(),
+    deal_interests: { count: 15 },
   },
   {
     id: "demo-6",
@@ -149,6 +155,7 @@ const DEMO_DEALS: Opportunity[] = [
     is_featured: false,
     created_by: null,
     created_at: new Date(Date.now() - 432000000).toISOString(),
+    deal_interests: { count: 7 },
   },
 ];
 
@@ -168,7 +175,7 @@ const fetchOpportunities = async ({ pageParam = 0, queryKey }: { pageParam?: num
   try {
     let query = supabase
       .from("deals")
-      .select("*")
+      .select("*, deal_interests(count)")
       .eq("is_removed", false)
       .range(pageParam, pageParam + PAGE_SIZE - 1);
 
@@ -696,6 +703,18 @@ const Marketplace = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-bold text-primary">{formatAmount(opp.funding_amount)}</span>
                       <span className="text-[10px] text-muted-foreground capitalize">{opp.funding_type.replace(/_/g, " ")}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      {opp.deal_interests && opp.deal_interests.count > 0 && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Eye className="w-3 h-3" /> {opp.deal_interests.count} interested
+                        </span>
+                      )}
+                      {!isDemo && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(opp.created_at).toLocaleDateString()}
+                        </span>
+                      )}
                     </div>
                     <div className="mt-3 pt-3 border-t border-border">
                       {isDemo ? (
