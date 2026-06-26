@@ -17,6 +17,8 @@ interface OnboardingData {
   bio: string;
   sectors: string[];
   location: string;
+  investment_range?: string;
+  funding_amount?: string;
 }
 
 const BUSINESS_SECTORS = [
@@ -35,6 +37,7 @@ const steps = [
   { id: "role", title: "Select Your Role", description: "Are you a business seeking funding or an investor?" },
   { id: "profile", title: "Complete Your Profile", description: "Tell us about yourself" },
   { id: "preferences", title: "Set Your Preferences", description: "Help us match you with opportunities" },
+  { id: "financial", title: "Financial Information", description: "Set your investment or funding goals" },
   { id: "verify", title: "Verify Your Account", description: "Identity verification (optional now, required later)" },
 ];
 
@@ -53,6 +56,8 @@ export const OnboardingFlow = ({
     bio: "",
     sectors: [],
     location: "",
+    investment_range: "",
+    funding_amount: "",
   });
   const [loading, setLoading] = useState(false);
 
@@ -105,6 +110,17 @@ export const OnboardingFlow = ({
         return;
       }
 
+      // Validate financial information
+      if (data.role === "business" && !data.funding_amount) {
+        toast.error("Funding amount is required");
+        return;
+      }
+
+      if (data.role === "investor" && !data.investment_range) {
+        toast.error("Investment range is required");
+        return;
+      }
+
       // Map UI role to profiles.user_role column
       const userRole =
         data.role === "business" ? "business_owner" : "investor";
@@ -119,6 +135,8 @@ export const OnboardingFlow = ({
           preferred_sectors: data.sectors.length > 0 ? data.sectors : null,
           sector: data.sectors[0] ?? null,
           location: data.location.trim(),
+          investment_range: data.role === "investor" ? data.investment_range : null,
+          funding_amount: data.role === "business" ? parseInt(data.funding_amount || "0") : null,
           onboarded: true,
           onboarded_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -318,8 +336,80 @@ export const OnboardingFlow = ({
             </div>
           )}
 
-          {/* Step 3: Verification */}
+          {/* Step 3: Financial Information */}
           {currentStep === 3 && (
+            <div className="space-y-4">
+              {data.role === "business" ? (
+                <div>
+                  <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                    Funding Amount Needed (GH₵) *
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">How much funding are you seeking for your business?</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </label>
+                  <Input
+                    type="number"
+                    value={data.funding_amount}
+                    onChange={(e) => setData((prev) => ({ ...prev, funding_amount: e.target.value }))}
+                    placeholder="e.g., 50000"
+                    className="bg-muted/50"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This helps us match you with investors in your range
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                    Investment Range (GH₵) *
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">What's your typical investment range per deal?</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </label>
+                  <select
+                    value={data.investment_range}
+                    onChange={(e) => setData((prev) => ({ ...prev, investment_range: e.target.value }))}
+                    className="w-full rounded-md bg-muted/50 border border-border px-3 py-2"
+                  >
+                    <option value="">Select your investment range</option>
+                    <option value="0-10000">Under GH₵10K</option>
+                    <option value="10000-100000">GH₵10K – 100K</option>
+                    <option value="100000-500000">GH₵100K – 500K</option>
+                    <option value="500000-1000000">GH₵500K – 1M</option>
+                    <option value="1000000+">Over GH₵1M</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    We'll show you deals matching your investment capacity
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-accent/10 border border-accent rounded-lg p-4 text-sm">
+                <p className="text-muted-foreground">
+                  {data.role === "business"
+                    ? "💡 Tip: Be realistic with your funding ask. Investors prefer well-researched, justified amounts."
+                    : "💡 Tip: Selecting your range helps us filter deals that fit your portfolio strategy."}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Verification */}
+          {currentStep === 4 && (
             <div className="text-center py-6 space-y-4">
               <Shield className="w-12 h-12 text-primary mx-auto mb-4" />
               <h3 className="font-semibold mb-2">Verify Your Identity</h3>
@@ -334,13 +424,13 @@ export const OnboardingFlow = ({
                 </p>
               </div>
               <div className="flex justify-center">
-                <SmileIdVerifyButton 
-                  userId={user.id} 
+                <SmileIdVerifyButton
+                  userId={user.id}
                   status={null}
-                  onStarted={() => setCurrentStep(4)} 
+                  onStarted={() => setCurrentStep(5)}
                 />
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setCurrentStep(4)} className="w-full text-muted-foreground">
+              <Button variant="ghost" size="sm" onClick={() => setCurrentStep(5)} className="w-full text-muted-foreground">
                 Skip for now (verify later in profile)
               </Button>
             </div>
