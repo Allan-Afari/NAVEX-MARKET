@@ -54,10 +54,10 @@ const DealQualityScoreDisplay = ({
     return (
       <div className="flex items-center gap-2">
         <div className="flex-1">
-          <div className="text-2xl font-bold">{score.totalScore}</div>
-          <p className="text-xs text-muted-foreground">Quality Score</p>
+          <div className="text-lg font-bold">{score.totalScore}</div>
+          <p className="text-[10px] text-muted-foreground">Quality Score</p>
         </div>
-        <Badge className={badge.bgColor + " " + badge.color}>
+        <Badge className={badge.bgColor + " " + badge.color} variant="secondary">
           {badge.text}
         </Badge>
       </div>
