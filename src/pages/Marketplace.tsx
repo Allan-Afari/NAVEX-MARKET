@@ -294,9 +294,8 @@ const Marketplace = () => {
       if (!creatorIds.length) return [];
       const { data: profiles, error: profileError } = await supabase
         .from("profiles")
-        .select("id")
-        .in("id", creatorIds)
-        .eq("verification_status", "verified");
+        .select("id, subscription_tier")
+        .in("id", creatorIds);
       if (profileError) throw profileError;
       return profiles || [];
     },
@@ -305,6 +304,17 @@ const Marketplace = () => {
 
   const verifiedCreators = useMemo(
     () => new Set((verifiedProfiles || []).map((profile: { id: string }) => profile.id)),
+    [verifiedProfiles]
+  );
+
+  const premiumCreators = useMemo(
+    () => new Set(
+      (verifiedProfiles || [])
+        .filter((profile: { subscription_tier?: string }) => 
+          profile.subscription_tier === "pro" || profile.subscription_tier === "premium"
+        )
+        .map((profile: { id: string }) => profile.id)
+    ),
     [verifiedProfiles]
   );
 
@@ -328,10 +338,17 @@ const Marketplace = () => {
         return items.sort((a, b) => (a.funding_amount ?? Infinity) - (b.funding_amount ?? Infinity));
       case "funding_desc":
         return items.sort((a, b) => (b.funding_amount ?? 0) - (a.funding_amount ?? 0));
+      case "newest":
       default:
-        return items;
+        return items.sort((a, b) => {
+          // Premium users' deals get priority
+          const aPremium = a.created_by && premiumCreators.has(a.created_by) ? 1 : 0;
+          const bPremium = b.created_by && premiumCreators.has(b.created_by) ? 1 : 0;
+          if (aPremium !== bPremium) return bPremium - aPremium;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
     }
-  }, [allOpportunities, filters.sortBy, verifiedCreators]);
+  }, [allOpportunities, filters.sortBy, verifiedCreators, premiumCreators]);
 
   const isBusiness = !!user && role === "business";
 
