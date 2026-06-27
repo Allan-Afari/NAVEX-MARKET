@@ -12,6 +12,7 @@ import DealRoomList from "@/components/deal-rooms/DealRoomList";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import OpportunityAlert from "@/components/OpportunityAlert";
 import { WelcomeTour } from "@/components/WelcomeTour";
+import ReferralBanner from "@/components/ReferralBanner";
 
 interface MyOpportunity {
   id: string;
@@ -299,6 +300,9 @@ const Dashboard = () => {
             </div>
           ))}
         </div>
+
+        {/* Referral Banner */}
+        {user && <ReferralBanner user={user} />}
 
         {/* Role-specific section */}
         {isBusiness ? (
