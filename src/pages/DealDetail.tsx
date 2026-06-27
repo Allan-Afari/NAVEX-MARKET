@@ -12,6 +12,7 @@ import {
 import DealChat from "@/components/DealChat";
 import ReportButton from "@/components/ReportButton";
 import DealQualityScoreDisplay from "@/components/DealQualityScoreDisplay";
+import ReviewCard from "@/components/ReviewCard";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 
@@ -71,6 +72,16 @@ interface DealUpdate {
   created_at: string;
 }
 
+interface Review {
+  id: string;
+  deal_id: string;
+  reviewer_id: string;
+  reviewer_name: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+}
+
 const DealDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [user, setUser] = useState<User | null>(null);
@@ -79,13 +90,17 @@ const DealDetail = () => {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [activity, setActivity] = useState<ActivityLog[]>([]);
   const [updates, setUpdates] = useState<DealUpdate[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [interestMessage, setInterestMessage] = useState("");
   const [newUpdate, setNewUpdate] = useState("");
   const [newMilestoneTitle, setNewMilestoneTitle] = useState("");
   const [showInterestForm, setShowInterestForm] = useState(false);
   const [showMilestoneForm, setShowMilestoneForm] = useState(false);
   const [featureLoading, setFeatureLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "milestones" | "updates" | "activity" | "messages">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "milestones" | "updates" | "activity" | "messages" | "reviews">("overview");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [showReviewForm, setShowReviewForm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -99,29 +114,32 @@ const DealDetail = () => {
     if (!id || !user) return;
     const fetchDeal = async () => {
       try {
-        const [dealRes, interestsRes, milestonesRes, activityRes, updatesRes] = await Promise.all([
+        const [dealRes, interestsRes, milestonesRes, activityRes, updatesRes, reviewsRes] = await Promise.all([
           supabase.from("deals").select("*").eq("id", id).single(),
           supabase.from("deal_interests").select("*").eq("deal_id", id).order("created_at", { ascending: false }).limit(50),
           supabase.from("deal_milestones").select("*").eq("deal_id", id).order("created_at", { ascending: true }).limit(50),
           supabase.from("deal_activity_log").select("*").eq("deal_id", id).order("created_at", { ascending: false }).limit(20),
           supabase.from("deal_updates").select("*").eq("deal_id", id).order("created_at", { ascending: false }).limit(20),
+          supabase.from("deal_reviews").select("*").eq("deal_id", id).order("created_at", { ascending: false }).limit(20),
         ]);
-        
+
         if (dealRes.error) {
           console.error("Deal fetch error:", dealRes.error);
           return;
         }
-        
+
         if (interestsRes.error) console.error("Interests fetch error:", interestsRes.error);
         if (milestonesRes.error) console.error("Milestones fetch error:", milestonesRes.error);
         if (activityRes.error) console.error("Activity fetch error:", activityRes.error);
         if (updatesRes.error) console.error("Updates fetch error:", updatesRes.error);
+        if (reviewsRes.error) console.error("Reviews fetch error:", reviewsRes.error);
 
         if (dealRes.data) setDeal(dealRes.data as Deal);
         if (interestsRes.data) setInterests(interestsRes.data);
         if (milestonesRes.data) setMilestones(milestonesRes.data);
         if (activityRes.data) setActivity(activityRes.data);
         if (updatesRes.data) setUpdates(updatesRes.data);
+        if (reviewsRes.data) setReviews(reviewsRes.data as Review[]);
       } catch (error) {
         console.error("DealDetail fetch error:", error);
       }
@@ -233,6 +251,42 @@ const DealDetail = () => {
       toast.error("Network error");
     } finally {
       setFeatureLoading(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!user || !deal || !reviewComment.trim()) {
+      toast.error("Please provide a review comment");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("deal_reviews").insert({
+        deal_id: deal.id,
+        reviewer_id: user.id,
+        reviewer_name: user.user_metadata?.full_name || "Anonymous",
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+      });
+
+      if (error) throw error;
+
+      toast.success("Review submitted successfully");
+      setReviewComment("");
+      setReviewRating(5);
+      setShowReviewForm(false);
+
+      // Refresh reviews
+      const { data: newReviews } = await supabase
+        .from("deal_reviews")
+        .select("*")
+        .eq("deal_id", deal.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (newReviews) setReviews(newReviews as Review[]);
+    } catch (error) {
+      console.error("Review submission error:", error);
+      toast.error("Failed to submit review");
     }
   };
 
@@ -384,6 +438,7 @@ const DealDetail = () => {
             { key: "milestones" as const, label: "Milestones", icon: CheckCircle2 },
             { key: "updates" as const, label: "Updates", icon: TrendingUp },
             { key: "activity" as const, label: "Activity", icon: Clock },
+            { key: "reviews" as const, label: "Reviews", icon: Star },
           ].map((t) => (
             <Button key={t.key} variant={activeTab === t.key ? "default" : "ghost"} size="sm" onClick={() => setActiveTab(t.key)}>
               <t.icon className="w-3.5 h-3.5 mr-1.5" /> {t.label}
@@ -478,6 +533,69 @@ const DealDetail = () => {
                       <p className="text-xs text-muted-foreground/60">{new Date(a.created_at).toLocaleString()}</p>
                     </div>
                   </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "reviews" && (
+          <div className="glass rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">Reviews</h3>
+              {user && !isOwner && !hasExpressedInterest && (
+                <Button size="sm" variant="outline" onClick={() => setShowReviewForm(true)}>
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Write Review
+                </Button>
+              )}
+            </div>
+            {showReviewForm && (
+              <div className="bg-muted/30 rounded-lg p-4 mb-4 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Rating</label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setReviewRating(star)}
+                        className="p-1"
+                      >
+                        <Star className={`w-5 h-5 ${star <= reviewRating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Your Review</label>
+                  <Textarea
+                    placeholder="Share your experience with this deal..."
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    className="bg-muted/50"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" className="gradient-primary text-primary-foreground" onClick={handleSubmitReview}>
+                    Submit Review
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowReviewForm(false)}>Cancel</Button>
+                </div>
+              </div>
+            )}
+            {reviews.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No reviews yet. Be the first to review!</p>
+            ) : (
+              <div className="space-y-3">
+                {reviews.map((review) => (
+                  <ReviewCard
+                    key={review.id}
+                    reviewerName={review.reviewer_name}
+                    rating={review.rating}
+                    comment={review.comment}
+                    date={review.created_at}
+                    dealTitle={deal.title}
+                  />
                 ))}
               </div>
             )}
