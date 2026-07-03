@@ -79,7 +79,7 @@ const Dashboard = () => {
             .single(),
           supabase
             .from("agreements")
-            .select("id", { count: "exact", head: true })
+            .select("id", { count: "estimated", head: true })
             .eq("created_by", user.id),
         ]);
 

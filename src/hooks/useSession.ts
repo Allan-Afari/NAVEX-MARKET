@@ -16,13 +16,21 @@ export const useSession = (): UseSessionResult => {
     let mounted = true;
 
     const init = async () => {
-      const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
+      try {
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession();
 
-      if (!mounted) return;
-      setSession(currentSession ?? null);
-      setLoading(false);
+        if (!mounted) return;
+        setSession(currentSession ?? null);
+      } catch (error) {
+        console.error("Session initialization error:", error);
+        if (!mounted) return;
+        setSession(null);
+      } finally {
+        if (!mounted) return;
+        setLoading(false);
+      }
     };
 
     init();

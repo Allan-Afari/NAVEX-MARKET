@@ -45,13 +45,11 @@ const Signup = () => {
 
     const userId = data.user?.id;
     if (userId) {
-      // Trigger automatic compliance check on signup
-      await checkComplianceOnSignup(userId).catch((err) => {
+      void checkComplianceOnSignup(userId).catch((err) => {
         console.error("Compliance check failed during signup:", err);
       });
 
-      // Initialize default privacy settings
-      await updateUserPrivacySettings(userId, {
+      void updateUserPrivacySettings(userId, {
         ...DEFAULT_PRIVACY_SETTINGS,
         email_marketing: true,
         profile_visibility: "connections_only",
